@@ -10,3 +10,16 @@ matplotlib>=3.7.0
 
 # Для работы с текстом
 nltk>=3.8.0
+
+# Для работы с Gmail
+google-api-python-client>=2.0.0
+google-auth-httplib2>=0.1.0
+google-auth-oauthlib>=0.4.6
+
+# Для работы с Mattermost
+mattermostdriver>=7.3.2
+
+# Для тестирования
+pytest>=7.0.0
+pytest-asyncio>=0.18.0
+pytest-cov>=3.0.0
