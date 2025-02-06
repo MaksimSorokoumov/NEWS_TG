@@ -33,4 +33,15 @@ ENV/
 logs/
 
 # Data
-data/ 
+data/
+
+# Telegram configuration
+config.json
+*.session
+*.session-journal
+
+# Sensitive data
+*.key
+*.pem
+*.env
+secrets/ 

@@ -3,10 +3,13 @@ project/
 ├── requirements.txt
 ├── setup.py
 ├── .gitignore
+├── config.json           # Конфигурация API Telegram
+├── telegram_session.session  # Файл сессии Telegram
 ├── config/
 │   └── settings.py
 ├── data/
 │   ├── raw/
+│   │   └── telegram/    # Директория для сохранения сообщений из Telegram
 │   └── processed/
 ├── docs/
 ├── logs/
@@ -20,6 +23,8 @@ project/
 │   ├── data_collection/
 │   │   ├── __init__.py
 │   │   ├── telegram_api.py       # Работа с API Telegram
+│   │   ├── config.py            # Управление конфигурацией
+│   │   ├── example.py           # Пример использования
 │   │   ├── other_sources.py      # Интеграция с Twitter, Reddit, форумами и т.д.
 │   │   └── data_collector.py     # Основная логика сбора данных
 │   ├── data_storage/

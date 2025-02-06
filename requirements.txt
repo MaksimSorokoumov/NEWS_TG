@@ -1,12 +1,12 @@
-python>=3.8
-requests
-pandas
-numpy
-scikit-learn
-nltk
-spacy
-transformers
-torch
-tensorflow
-kafka-python
-pika  # для интеграции с RabbitMQ
+# Базовые библиотеки
+telethon>=1.38.0
+python-telegram-bot>=20.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Для анализа данных
+scikit-learn>=1.0.0
+matplotlib>=3.7.0
+
+# Для работы с текстом
+nltk>=3.8.0
