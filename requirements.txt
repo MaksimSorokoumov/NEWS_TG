@@ -1,0 +1,12 @@
+python>=3.8
+requests
+pandas
+numpy
+scikit-learn
+nltk
+spacy
+transformers
+torch
+tensorflow
+kafka-python
+pika  # для интеграции с RabbitMQ
