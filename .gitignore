@@ -32,6 +32,9 @@ ENV/
 # Logs
 *.log
 logs/
+analyzer_log.txt
+downloader_log.txt
+sender_log.txt
 
 # Директории данных
 data/
