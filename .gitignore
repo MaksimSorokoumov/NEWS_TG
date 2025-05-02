@@ -23,6 +23,7 @@ var/
 # Virtual Environment
 venv/
 ENV/
+.venv/
 
 # IDE
 .idea/
@@ -32,8 +33,11 @@ ENV/
 *.log
 logs/
 
-# Data
+# Директории данных
 data/
+sessions/
+logs/
+reports/
 
 # Telegram configuration
 config.json
