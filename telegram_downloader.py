@@ -28,11 +28,15 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("downloader_log.txt", encoding='utf-8'),
+        logging.FileHandler("logs/downloader_log.txt", mode='w', encoding='utf-8'),
         EmojiSafeStreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger('TelegramDownloader')
+
+# Ensure logs directory exists
+if not os.path.exists("logs"):
+    os.makedirs("logs")
 
 class TelegramDownloader:
     def __init__(self, config_path='config.json'):

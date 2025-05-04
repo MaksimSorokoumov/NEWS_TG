@@ -25,11 +25,15 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("list_channels_log.txt", encoding='utf-8'),
+        logging.FileHandler("logs/list_channels_log.txt", mode='w', encoding='utf-8'),
         EmojiSafeStreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger('ListChannelsScript')
+
+# Ensure logs dir
+if not os.path.exists("logs"):
+    os.makedirs("logs")
 
 def load_config(config_path='config.json'):
     """Загрузка конфигурации из JSON файла."""

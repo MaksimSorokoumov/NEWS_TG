@@ -29,11 +29,15 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("main_log.txt", encoding='utf-8'),
+        logging.FileHandler("logs/main_log.txt", mode='w', encoding='utf-8'),
         EmojiSafeStreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger('TelegramParserMain')
+
+# Ensure logs directory exists
+if not os.path.exists("logs"):
+    os.makedirs("logs")
 
 async def parse_and_send():
     """Основная функция для запуска всего процесса парсинга и отправки."""

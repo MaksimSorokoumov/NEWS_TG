@@ -111,6 +111,8 @@ python main.py send
 - `logs/main.log` - основной лог
 - `logs/downloader.log` - лог загрузки
 - `logs/analyzer.log` - лог анализа
+- `logs/sender.log` - лог отправки
+- `logs/list_channels.log` - лог списка каналов
 
 ## 📄 Лицензия
 

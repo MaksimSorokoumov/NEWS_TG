@@ -29,11 +29,15 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("sender_log.txt", encoding='utf-8'),
+        logging.FileHandler("logs/sender_log.txt", mode='w', encoding='utf-8'),
         EmojiSafeStreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger('MessageSender')
+
+# Ensure logs directory exists
+if not os.path.exists("logs"):
+    os.makedirs("logs")
 
 class MessageSender:
     def __init__(self, config_path='config.json'):
