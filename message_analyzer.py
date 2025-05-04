@@ -7,6 +7,7 @@ import requests
 from datetime import datetime
 import asyncio
 import time
+import difflib
 
 # Настройка логирования
 class EmojiSafeStreamHandler(logging.StreamHandler):
@@ -98,6 +99,51 @@ class MessageAnalyzer:
             logger.error(f"Ошибка запроса к LLM API: {e}")
             return {"choices": [{"message": {"content": "[]"}}]}
 
+    def _normalize_text(self, text: str) -> str:
+        """Нормализует текст для более корректного сравнения."""
+        # Приводим к нижнему регистру
+        text = text.lower()
+        # Удаляем ссылки
+        text = re.sub(r"http[s]?://\S+", "", text)
+        # Удаляем символы пунктуации, спец‐символы, эмодзи
+        text = re.sub(r"[^\w\s]", "", text)
+        # Сжимаем множественные пробелы
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+
+    def _remove_near_duplicates(self, messages, threshold: float = 0.9):
+        """Удаляет сообщения, очень похожие по содержанию (почти дубликаты).
+
+        Оставляет наиболее длинный вариант текста среди схожих.
+        threshold – минимальная доля схожести (0..1), выше – строже.
+        """
+        if not messages:
+            return []
+
+        unique_messages = []
+        normalized_texts = []
+
+        for msg in messages:
+            norm = self._normalize_text(msg.get("message", ""))
+            is_duplicate = False
+            for i, saved_norm in enumerate(normalized_texts):
+                # Используем SequenceMatcher для оценки схожести
+                if difflib.SequenceMatcher(None, norm, saved_norm).ratio() >= threshold:
+                    is_duplicate = True
+                    # Оставляем более длинный текст как более информативный
+                    if len(norm) > len(saved_norm):
+                        unique_messages[i] = msg
+                        normalized_texts[i] = norm
+                    break
+            if not is_duplicate:
+                unique_messages.append(msg)
+                normalized_texts.append(norm)
+
+        removed_cnt = len(messages) - len(unique_messages)
+        if removed_cnt:
+            logger.info(f"Удалено {removed_cnt} дублирующих сообщений перед анализом")
+        return unique_messages
+
     def analyze_messages(self, messages):
         """Анализ сообщений для выявления уникальных."""
         if not messages:
@@ -105,6 +151,9 @@ class MessageAnalyzer:
             return []
             
         logger.info(f"Анализ {len(messages)} сообщений для определения уникальных...")
+        
+        # Удаляем явные дубликаты до передачи в LLM
+        messages = self._remove_near_duplicates(messages)
         
         # Проверяем настройки LLM
         if not self.llm_enabled:
