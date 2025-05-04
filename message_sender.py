@@ -112,81 +112,32 @@ class MessageSender:
             return False
 
     async def send_message_via_bot(self, user_id, text):
-        """Отправка сообщения через Telegram Bot API."""
+        """Отправка сообщения через Telegram Bot API используя Markdown."""
         url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
-        
-        # Конвертируем Markdown-форматирование в HTML
-        text = self._convert_markdown_to_html(text)
-        
-        # Проверяем длину сообщения и разбиваем, если оно слишком длинное
-        if len(text) > 4000:  # Немного меньше лимита Telegram в 4096 символов
-            logger.info(f"Сообщение слишком длинное ({len(text)} символов), обрезаем до 2000 символов")
-            
-            # Находим первые два переноса строки после заголовка - примерное место конца заголовка
-            header_end = text.find("\n\n", 0)
-            if header_end == -1:
-                header_end = 0
-                
-            # Сохраняем заголовок и добавляем обрезанный текст
-            header = text[:header_end + 2] if header_end > 0 else ""
-            trimmed_text = header + text[header_end + 2:2000 - len(header) - 20] + "...\n\n<сообщение обрезано>"
-            
-            # Отправляем обрезанное сообщение
-            data = {
-                "chat_id": user_id,
-                "text": trimmed_text,
-                "parse_mode": "HTML"
-            }
-            
-            try:
-                response = requests.post(url, json=data)
-                response.raise_for_status()
-                return True
-            except Exception as e:
-                logger.error(f"Ошибка отправки обрезанного сообщения в Telegram: {e}")
-                return False
-        
-        # Обычная отправка для коротких сообщений
-        data = {
-            "chat_id": user_id,
-            "text": text,
-            "parse_mode": "HTML"
-        }
-        
+        # Текст с Markdown (header + body)
+        md_text = text
+        # Обрезка до лимита (4096 символов)
+        if len(md_text) > 4000:
+            logger.info(f"Сообщение слишком длинное ({len(md_text)}), обрезаем до 4000")
+            header_end = md_text.find("\n\n")
+            header = md_text[:header_end+2] if header_end > 0 else ""
+            md_text = header + md_text[header_end+2:4000 - len(header) - 20] + "...<сообщение обрезано>"
+        # Попытка отправки с Markdown
+        data = {"chat_id": user_id, "text": md_text, "parse_mode": "Markdown"}
         try:
             response = requests.post(url, json=data)
             response.raise_for_status()
             return True
         except Exception as e:
-            logger.error(f"Ошибка отправки сообщения в Telegram: {e}")
-            # При ошибке с форматированием HTML, пробуем отправить без форматирования
-            try:
-                logger.info(f"Повторная отправка без форматирования")
-                data["parse_mode"] = None  # Отключаем форматирование
-                response = requests.post(url, json=data)
-                response.raise_for_status()
-                return True
-            except Exception as e2:
-                logger.error(f"Повторная ошибка отправки сообщения в Telegram: {e2}")
-                return False
-
-    def _convert_markdown_to_html(self, text):
-        """Конвертирует Markdown-форматирование в HTML."""
-        # Замена жирного текста: **text** или __text__ -> <b>text</b>
-        text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
-        text = re.sub(r'__(.*?)__', r'<b>\1</b>', text)
-        
-        # Замена курсива: *text* или _text_ -> <i>text</i>
-        text = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'<i>\1</i>', text)
-        text = re.sub(r'(?<!_)_([^_]+)_(?!_)', r'<i>\1</i>', text)
-        
-        # Замена моноширинного текста: `text` -> <code>text</code>
-        text = re.sub(r'`(.*?)`', r'<code>\1</code>', text)
-        
-        # Преобразование ссылок: [text](url) -> <a href="url">text</a>
-        text = re.sub(r'\[(.*?)\]\((.*?)\)', r'<a href="\2">\1</a>', text)
-        
-        return text
+            logger.error(f"Ошибка отправки Markdown: {e}")
+        # Фоллбэк без форматирования
+        try:
+            response = requests.post(url, json={"chat_id": user_id, "text": md_text})
+            response.raise_for_status()
+            return True
+        except Exception as e:
+            logger.error(f"Фоллбэк plain text не удался: {e}")
+            return False
 
     async def group_messages_by_channel(self, messages):
         """Группировка сообщений по каналам."""
@@ -225,13 +176,11 @@ class MessageSender:
             if not (channel_id and message_id):
                 logger.warning(f"Не удалось создать заголовок: отсутствует channel_id или id сообщения")
                 return ""
-                
-            # Для публичных каналов удаляем первые 4 символа из ID
+            # Для публичных каналов убираем префикс в URL
             channel_id_clean = str(channel_id)[4:] if str(channel_id).startswith('-100') else channel_id
             message_url = f"https://t.me/c/{channel_id_clean}/{message_id}"
-            
-            # Используем HTML-форматирование
-            header = f"<b><a href=\"{message_url}\">{channel_name}</a></b>\n\n"
+            # Markdown-заголовок
+            header = f"[{channel_name}]({message_url})\n\n"
             return header
         except Exception as e:
             logger.error(f"Ошибка при создании заголовка: {e}")
@@ -245,19 +194,21 @@ class MessageSender:
             return False
         logger.info(f"Пересылаем {len(messages)} сообщений...")
 
-        # Инициализация клиента и media_handler для форварда
+        # Инициализация клиента Telegram и media_handler (для прямого форварда и загрузки медиа)
         target_user = None
-        if self.direct_forward:
-            client_ok = await self.initialize_client()
-            if client_ok:
-                try:
-                    target_user = await self.client.get_entity(int(self.user_id))
-                    logger.info(f"Получен пользователь для форварда: {target_user.id}")
-                except Exception as e:
-                    logger.error(f"Не удалось получить entity пользователя: {e}")
-                    target_user = None
-            else:
-                self.direct_forward = False
+        client_ok = await self.initialize_client()
+        if not client_ok:
+            logger.error("Не удалось инициализировать клиент Telegram.")
+        # Если включён прямой форвард и клиент инициализирован, получаем пользователя
+        if self.direct_forward and client_ok:
+            try:
+                target_user = await self.client.get_entity(int(self.user_id))
+                logger.info(f"Получен пользователь для форварда: {target_user.id}")
+            except Exception as e:
+                logger.error(f"Не удалось получить entity пользователя: {e}")
+                target_user = None
+        elif self.direct_forward and not client_ok:
+            self.direct_forward = False
 
         sent_count = 0
         for msg in messages:
@@ -285,21 +236,21 @@ class MessageSender:
                         continue
 
                 # 2. Пересылка медиа через Bot API
-                if msg.get('has_media') and msg.get('media_info') and self.media_handler:
-                    # Добавляем заголовок к описанию медиа
-                    if 'caption' in msg['media_info']:
-                        msg['media_info']['caption'] = header + msg['media_info']['caption']
-                    else:
-                        msg['media_info']['caption'] = header
-                        
-                    ok = await self.media_handler.forward_message_with_media(
-                        self.bot_token, self.user_id, msg, msg['media_info'], msg.get('channel_name')
-                    )
-                    if ok:
-                        sent_count += 1
-                        logger.info(f"Bot API форвард медиа {msg['id']} с заголовком")
-                        await asyncio.sleep(self.wait_delay)
-                        continue
+                if msg.get('has_media') and self.media_handler:
+                    # загружаем оригинальное сообщение для скачивания медиа
+                    channel_entity, tele_msg = await self.load_channel_message_pair(msg['channel_id'], msg['id'])
+                    if tele_msg:
+                        media_info = await self.media_handler.download_message_media(tele_msg, msg['channel_id'])
+                        if media_info:
+                            media_info['caption'] = header + media_info.get('caption', '')
+                            ok = await self.media_handler.forward_message_with_media(
+                                self.bot_token, self.user_id, msg, media_info, msg.get('channel_name')
+                            )
+                            if ok:
+                                sent_count += 1
+                                logger.info(f"Bot API форвард медиа {msg['id']} с заголовком")
+                                await asyncio.sleep(self.wait_delay)
+                                continue
 
                 # 3. Пересылка текста через Bot API
                 text = msg.get('message', '').strip()

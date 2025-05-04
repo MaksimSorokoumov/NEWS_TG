@@ -178,22 +178,19 @@ class MediaHandler:
                 url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
                 method = 'document'
                 
-            # Подготавливаем данные для запроса
+            # Подготавливаем данные для запроса (используем Markdown)
             data = {
                 'chat_id': chat_id,
-                'parse_mode': 'HTML'
+                'parse_mode': 'Markdown'
             }
-            
+            # Добавляем подпись к медиа, если есть
             if caption:
-                # Преобразуем Markdown в HTML
-                caption = self._convert_markdown_to_html(caption)
-                
-                # Ограничение длины описания для Telegram API - 1024 символа
+                # Обрезаем подпись до 1024 символов
                 if len(caption) > 1024:
                     data['caption'] = caption[:1021] + "..."
                 else:
                     data['caption'] = caption
-                
+            
             files = {
                 method: (media_info.get('filename', os.path.basename(local_path)), open(local_path, 'rb'))
             }
